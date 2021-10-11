@@ -1,5 +1,5 @@
 # card-battle-using-discord-bot
-a pretty unoptimized code for a discord bot
+a pretty unoptimized discord js code for a discord bot
 
 so uh i made this code for me and my friends' discord server
 
