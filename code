@@ -1,0 +1,1074 @@
+const { Client, Intents, GuildManager, MessageEmbed } = require('discord.js');
+
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS,] });
+
+
+client.on('ready', () => {
+    console.log(`Logged in as ${client.user.tag}`);
+});
+
+const prefix = '>';
+
+var game = 0;
+var p1name = "player1";
+var p2name = "player2";
+var p1check = 0;
+var p2check = 0;
+var turn = 0;
+var p1health = 50;
+var p2health = 50;
+var p1energy = 6;
+var p2energy = 6;
+var p1attack = 0;
+var p2attack = 0;
+var p1poisoned = 0;
+var p2poisoned = 0;
+
+client.on('message', async function (message) {
+
+    if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+    var miss = function (n) {
+        return !!n && Math.random() <= n;
+    };
+
+    var crit = function (n) {
+        return !!n && Math.random() <= n;
+    };
+
+    const args = message.content.slice(prefix.length).split(/ +/);
+    const command = args.shift().toLowerCase();
+
+    if (command === 'play' && game === 0) {
+        const pregame = {
+            color: 0x0099ff,
+            title: 'Card Battle!',
+            description: 'Choose who goes first by typing the command >play 1/2\n(Type >play stop at eny point of the game to stop the game))',
+        };
+        message.channel.send({ embeds: [pregame] })
+        game = 1;
+    }
+
+    if (command === 'play' && args[0] === 'stop') {
+        const pregame = {
+            color: 0x0099ff,
+            title: 'Game Over',
+            description: 'Game is stopped',
+        };
+
+        message.channel.send({ embeds: [pregame] })
+        game = 0;
+        p1name = "player1";
+        p2name = "player2";
+        p1check = 0;
+        p2check = 0;
+        turn = 0;
+        p1health = 50;
+        p2health = 50;
+        p1energy = 6;
+        p2energy = 6;
+        p1attack = 0;
+        p2attack = 0;
+        p1poisoned = 0;
+        p2poisoned = 0;
+    }
+
+    if (command === 'play' && game === 1 && args[0] === '1') {
+        message.react('1️⃣');
+        p1name = message.author.tag;
+        p1check = 1;
+    }
+
+    if (command === 'play' && game === 1 && args[0] === '2') {
+        message.react('2️⃣');
+        p2name = message.author.tag;
+        p2check = 1;
+    }
+
+    if (p1check === 1 && p2check === 1 && game === 1) {
+        const deckselect = {
+            color: 0x0099ff,
+            title: 'Deck Selection',
+            description: 'Choose your deck by typing the command >play A/B/C',
+            fields: [
+                {
+                    name: 'A: Poison Deck',
+                    value: 'Apply poison to your enemies!',
+                },
+                {
+                    name: 'B: Energy Deck',
+                    value: 'Steal the precious energy of your enemies!',
+                    inline: true,
+                },
+                {
+                    name: 'C: Mage Deck',
+                    value: 'Deal massive bursts of damage to your enemies!',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [deckselect] })
+        game = 2;
+    }
+
+    if (command === 'play' && game === 2 && args[0] === 'A' && message.author.tag === p1name) {
+        message.react('☠️');
+        p1deck = 1;
+        p1check = 2;
+    }
+    else if (command === 'play' && game === 2 && args[0] === 'B' && message.author.tag === p1name) {
+        message.react('⚡');
+        p1deck = 2;
+        p1check = 2;
+    }
+    else if (command === 'play' && game === 2 && args[0] === 'C' && message.author.tag === p1name) {
+        message.react('🔮');
+        p1deck = 3;
+        p1check = 2;
+    }
+    else {
+
+    }
+
+    if (command === 'play' && game === 2 && args[0] === 'A' && message.author.tag === p2name) {
+        message.react('☠️');
+        p2deck = 1;
+        p2check = 2;
+    }
+    else if (command === 'play' && game === 2 && args[0] === 'B' && message.author.tag === p2name) {
+        message.react('⚡');
+        p2deck = 2;
+        p2check = 2;
+    }
+    else if (command === 'play' && game === 2 && args[0] === 'C' && message.author.tag === p2name) {
+        message.react('🔮');
+        p2deck = 3;
+        p2check = 2;
+    }
+    else {
+
+    }
+
+    if (p1check === 2 && p2check === 2 && game === 2) {
+
+        message.channel.send('The game will now begin')
+        game = 3;
+        turn = 1;
+    }
+
+    if (game === 3 && turn === 1 && p1deck === 1) {
+        const p1turn = {
+            color: 0x0099ff,
+            title: p1name + 's Turn',
+            description: 'Poison Deck (Damage/Shield/Special/Cost/Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p1energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Toxic Spray',
+                    value: '3/6/add 1 poison damage/5/90%',
+                },
+                {
+                    name: 'B: Toxic Bomb',
+                    value: '7/7/add 1 poison damage/7/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Toxic Cloud',
+                    value: '10/6/add 2 poison damage/10/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Toxic Rain',
+                    value: '12/15/add 5 poison damage/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p1turn] })
+        turn = 11;
+    }
+    else if (game === 3 && turn === 1 && p1deck === 2) {
+        const p1turn = {
+            color: 0x0099ff,
+            title: p1name + 's Turn',
+            description: 'Energy Deck (Damage/Shield/Special/Cost/Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p1energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Energy Destroy',
+                    value: '6/2/destroy 1 enemy energy/3/90%',
+                },
+                {
+                    name: 'B: Energy Steal',
+                    value: '10/7/steal 1 enemy energy/7/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Energy Magnet',
+                    value: '15/5/steal 3 energy/12/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Energy Drain',
+                    value: '20/10/destroy all energy of opponent/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p1turn] })
+        turn = 11;
+    }
+    else if (game === 3 && turn === 1 && p1deck === 3) {
+        const p1turn = {
+            color: 0x0099ff,
+            title: p1name + 's Turn',
+            description: 'Mage Deck (Damage/Shield/Special/Cost?Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p1energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Magic Barrier',
+                    value: '0/8/none/3/100%',
+                },
+                {
+                    name: 'B: Magic Bolt',
+                    value: '10/2/none/5/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Magic Blast',
+                    value: '15/10/none/10/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Magic Flash',
+                    value: '25/0/direct damage/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p1turn] })
+        turn = 11;
+    }
+    else {
+
+    }
+
+    if (command === 'play' && game === 3 && args[0] === 'skillA' && message.author.tag === p1name && turn === 11) {
+        if (p1deck === 1 && p1energy >= 5) {
+            p1attack = 3;
+            if (miss(.9)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 6;
+            p2poisoned += 1;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy += 0;
+            turn = 2;
+        }
+        else if (p1deck === 2 && p1energy >= 3) {
+            p1attack = 6;
+            if (miss(.9)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 2;
+            if (p2energy > 0) {
+                p2energy -= 1;
+            }
+            else {
+
+            }
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy += 2;
+            turn = 2;
+        }
+        else if (p1deck === 3 && p1energy >= 3) {
+            p1attack = 0;
+            p1shield = 8;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy += 2;
+            turn = 2;
+        }
+        else {
+            message.channel.send('You only have ' + p1energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillB' && message.author.tag === p1name && turn === 11) {
+        if (p1deck === 1 && p1energy >= 7) {
+            p1attack = 7;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 7;
+            p2poisoned += 1;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 2;
+            turn = 2;
+        }
+        else if (p1deck === 2 && p1energy >= 7) {
+            p1attack = 10;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 7;
+            if (p2energy > 0) {
+                p1energy += 1;
+                p2energy -= 1;
+            }
+            else {
+
+            }
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 2;
+            turn = 2;
+        }
+        else if (p1deck === 3 && p1energy >= 5) {
+            p1attack = 10;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 2;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy += 0;
+            turn = 2;
+        }
+        else {
+            message.channel.send('You only have ' + p1energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillC' && message.author.tag === p1name && turn === 11) {
+        if (p1deck === 1 && p1energy >= 10) {
+            p1attack = 10;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 6;
+            p2poisoned += 2;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 5;
+            turn = 2;
+        }
+        else if (p1deck === 2 && p1energy >= 12) {
+            p1attack = 15;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 5;
+            if (p2energy >= 3) {
+                p1energy += 3;
+                p2energy -= 3;
+            }
+            else {
+
+            }
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 7;
+            turn = 2;
+        }
+        else if (p1deck === 3 && p1energy >= 10) {
+            p1attack = 15;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p1attack = Math.floor(p1attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p1attack = 0;
+            }
+            console.log(p1attack);
+            p1shield = 10;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 5;
+            turn = 2;
+        }
+        else {
+            message.channel.send('You only have ' + p1energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillD' && message.author.tag === p1name && turn === 11) {
+        if (p1deck === 1 && p1energy >= 20) {
+            p1attack = 12;
+            p1shield = 15;
+            p2poisoned += 5;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 15;
+            turn = 2;
+        }
+        else if (p1deck === 2 && p1energy >= 20) {
+            p1attack = 20;
+            p1shield = 10;
+            p2energy = 5;
+
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 15;
+            turn = 2;
+        }
+        else if (p1deck === 3 && p1energy >= 20) {
+            p1shield = 0;
+            p2health = p2health - 25;
+            p2attack = p2attack - p1shield;
+            if (p2attack < 0) {
+                p2attack = 0;
+            }
+            else {
+
+            }
+            p1health = p1health - (p2attack + p1poisoned);
+            p1energy -= 15;
+            turn = 2;
+        }
+        else {
+            message.channel.send('You only have ' + p1energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skip' && message.author.tag === p1name && turn === 11) {
+        p1attack = 0;
+        p1health = p1health - (p2attack + p1poisoned);
+        p1energy += 5;
+        turn = 2;
+    }
+    else {
+
+    }
+
+    if (game === 3 && turn === 2 && p2deck === 1) {
+        const p2turn = {
+            color: 0x0099ff,
+            title: p2name + 's Turn',
+            description: 'Poison Deck (Damage/Shield/Special/Cost/Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p2energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Toxic Spray',
+                    value: '3/6/add 1 poison damage/5/90%',
+                },
+                {
+                    name: 'B: Toxic Bomb',
+                    value: '7/7/add 1 poison damage/7/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Toxic Cloud',
+                    value: '10/6/add 2 poison damage/10/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Toxic Rain',
+                    value: '12/15/add 5 poison damage/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p2turn] })
+        turn = 22;
+    }
+    else if (game === 3 && turn === 2 && p2deck === 2) {
+        const p2turn = {
+            color: 0x0099ff,
+            title: p2name + 's Turn',
+            description: 'Energy Deck (Damage/Shield/Special/Cost/Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p2energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Energy Destroy',
+                    value: '6/2/destroy 1 enemy energy/3/90%',
+                },
+                {
+                    name: 'B: Energy Steal',
+                    value: '10/7/steal 1 enemy energy/7/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Energy Magnet',
+                    value: '15/5/steal 3 energy/12/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Energy Drain',
+                    value: '20/10/destroy all energy of opponent/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p2turn] })
+        turn = 22;
+    }
+    else if (game === 3 && turn === 2 && p2deck === 3) {
+        const p2turn = {
+            color: 0x0099ff,
+            title: p2name + 's Turn',
+            description: 'Mage Deck (Damage/Shield/Special/Cost/Chance) \n' + p1name + 's health:' + p1health + '     ' + p2name + 's health:' + p2health + '\nYour energy:' + p2energy,
+            fields: [
+                {
+                    name: 'Choose a Skill',
+                    value: 'Choose a skill by typing >play skillA/B/C/D',
+                },
+                {
+                    name: 'A: Magic Barrier',
+                    value: '0/10/none/3/100%',
+                },
+                {
+                    name: 'B: Magic Bolt',
+                    value: '10/2/none/5/75%',
+                    inline: true,
+                },
+                {
+                    name: 'C: Magic Blast',
+                    value: '10/15/none/10/60%',
+                    inline: true,
+                },
+                {
+                    name: 'D: Magic Flash',
+                    value: '25/0/direct damage/20/100%',
+                    inline: true,
+                },
+                {
+                    name: 'Skip',
+                    value: 'Type >play skip to skip turn',
+                    inline: true,
+                }],
+        };
+        message.channel.send({ embeds: [p2turn] })
+        turn = 22;
+    }
+    else {
+
+    }
+
+    if (command === 'play' && game === 3 && args[0] === 'skillA' && message.author.tag === p2name && turn === 22) {
+        if (p2deck === 1 && p2energy >= 5) {
+            p2attack = 3;
+            if (miss(.9)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 6;
+            p1poisoned += 1;
+            p1attack = p2attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy += 0;
+            turn = 1;
+        }
+        else if (p2deck === 2 && p2energy >= 3) {
+            p2attack = 6;
+            if (miss(.9)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 2;
+            if (p1energy > 0) {
+                p1energy -= 1;
+            }
+            else {
+
+            }
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy += 2;
+            turn = 1;
+        }
+        else if (p2deck === 3 && p2energy >= 3) {
+            p2attack = 0;
+            p2shield = 8;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy += 2;
+            turn = 1;
+        }
+        else {
+            message.channel.send('You only have ' + p2energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillB' && message.author.tag === p2name && turn === 22) {
+        if (p2deck === 1 && p2energy >= 7) {
+            p2attack = 7;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 7;
+            p1poisoned += 1;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 2;
+            turn = 1;
+        }
+        else if (p2deck === 2 && p2energy >= 7) {
+            p2attack = 10;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 7;
+            if (p1energy > 0) {
+                p2energy += 1;
+                p1energy -= 1;
+            }
+            else {
+
+            }
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 2;
+            turn = 1;
+        }
+        else if (p2deck === 3 && p2energy >= 5) {
+            p2attack = 10;
+            if (miss(.75)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 2;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy += 0;
+            turn = 1;
+        }
+        else {
+            message.channel.send('You only have ' + p2energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillC' && message.author.tag === p2name && turn === 22) {
+        if (p2deck === 1 && p2energy >= 10) {
+            p2attack = 10;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 6;
+            p1poisoned += 2;
+            p2attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 5;
+            turn = 1;
+        }
+        else if (p2deck === 2 && p2energy >= 12) {
+            p2attack = 15;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 5;
+            if (p1energy >= 3) {
+                p2energy += 3;
+                p1energy -= 3;
+            }
+            else {
+
+            }
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 7;
+            turn = 1;
+        }
+        else if (p2deck === 3 && p2energy >= 10) {
+            p2attack = 15;
+            if (miss(.6)) {
+                if (crit(.1)) {
+                    message.channel.send('Critical Hit!');
+                    p2attack = Math.floor(p2attack * 1.5);
+                } else {
+
+                }
+            } else {
+                message.channel.send('Attack Missed!');
+                p2attack = 0;
+            }
+            console.log(p2attack);
+            p2shield = 10;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 5;
+            turn = 1;
+        }
+        else {
+            message.channel.send('You only have ' + p2energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skillD' && message.author.tag === p2name && turn === 22) {
+        if (p2deck === 1 && p2energy >= 20) {
+            p2attack = 12;
+            p2shield = 15;
+            p1poisoned += 5;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 15;
+            turn = 1;
+        }
+        else if (p2deck === 2 && p2energy >= 20) {
+            p2attack = 20;
+            p2shield = 10;
+            p1energy = 5;
+
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 15;
+            turn = 1;
+        }
+        else if (p2deck === 3 && p2energy >= 20) {
+            p2shield = 0;
+            p1health = p1health - 25;
+            p1attack = p1attack - p2shield;
+            if (p1attack < 0) {
+                p1attack = 0;
+            }
+            else {
+
+            }
+            p2health = p2health - (p1attack + p2poisoned);
+            p2energy -= 15;
+            turn = 1;
+        }
+        else {
+            message.channel.send('You only have ' + p2energy + ' energy');
+        }
+    }
+    else if (command === 'play' && game === 3 && args[0] === 'skip' && message.author.tag === p2name && turn === 22) {
+        p2attack = 0;
+        p2health = p2health - (p1attack + p2poisoned);
+        p2energy += 5;
+        turn = 1;
+    }
+    else {
+
+    }
+
+
+    if (p1health <= 0 || p2health <= 0) {
+        if (p1health > p2health) {
+            const win = {
+                color: 0x0099ff,
+                title: 'Winner',
+                description: p1name + '',
+            };
+            message.channel.send({ embeds: [win] })
+        }
+        else {
+            const win = {
+                color: 0x0099ff,
+                title: 'Winner',
+                description: p2name + '',
+            };
+            message.channel.send({ embeds: [win] })
+        }
+
+        game = 0;
+        p1name = "player1";
+        p2name = "player2";
+        p1check = 0;
+        p2check = 0;
+        turn = 0;
+        p1health = 50;
+        p2health = 50;
+        p1energy = 6;
+        p2energy = 6;
+        p1poisoned = 0;
+        p2poisoned = 0;
+        p1attack = 0;
+        p2attack = 0;
+
+    }
+    else {
+
+    }
+});
+
+client.login('ENTER YOUR BOT's TOKEN HERE')
